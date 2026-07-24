@@ -47,52 +47,65 @@ function whiteScoreForRow(imageData, y, tolerance) {
   return rowWhiteRatio(imageData.data, imageData.width, y, 0, imageData.width, tolerance);
 }
 
-function findDivider(imageData, expected, axis, tolerance, searchRadius) {
+function findDividerBand(imageData, expected, axis, tolerance, searchRadius) {
   const limit = axis === "x" ? imageData.width : imageData.height;
   const start = Math.max(1, Math.round(expected - searchRadius));
   const end = Math.min(limit - 2, Math.round(expected + searchRadius));
   let best = Math.round(expected);
   let bestScore = 0;
+  const scoreAt = (p) => axis === "x"
+    ? whiteScoreForColumn(imageData, p, tolerance)
+    : whiteScoreForRow(imageData, p, tolerance);
 
   for (let p = start; p <= end; p += 1) {
-    const score = axis === "x"
-      ? whiteScoreForColumn(imageData, p, tolerance)
-      : whiteScoreForRow(imageData, p, tolerance);
-    const centerBias = 1 - (Math.abs(p - expected) / Math.max(1, searchRadius)) * 0.08;
+    const score = scoreAt(p);
+    const centerBias = 1 - (Math.abs(p - expected) / Math.max(1, searchRadius)) * 0.12;
     if (score * centerBias > bestScore) {
       bestScore = score * centerBias;
       best = p;
     }
   }
 
-  if (bestScore < 0.72) return Math.round(expected);
+  if (bestScore < 0.68) {
+    const center = Math.round(expected);
+    return { center, start: center, end: center - 1, found: false };
+  }
 
   let low = best;
   let high = best;
-  const scoreAt = (p) => axis === "x"
-    ? whiteScoreForColumn(imageData, p, tolerance)
-    : whiteScoreForRow(imageData, p, tolerance);
-  while (low > start && scoreAt(low - 1) > 0.72) low -= 1;
-  while (high < end && scoreAt(high + 1) > 0.72) high += 1;
-  return Math.round((low + high) / 2);
+  // A slightly lower edge threshold keeps anti-aliased/off-white pixels attached
+  // to the separator band while the higher peak threshold prevents false bands.
+  while (low > start && scoreAt(low - 1) >= 0.55) low -= 1;
+  while (high < end && scoreAt(high + 1) >= 0.55) high += 1;
+  return { center: Math.round((low + high) / 2), start: low, end: high, found: true };
 }
 
 export function calculateGrid(imageData, rows = 2, columns = 2, options = {}) {
   const { trim = true, tolerance = 12 } = options;
   const width = imageData.width;
   const height = imageData.height;
-  const searchX = Math.min(width / columns * 0.16, 80);
-  const searchY = Math.min(height / rows * 0.16, 80);
+  const searchX = width / columns * 0.38;
+  const searchY = height / rows * 0.38;
   const xCuts = [0];
   const yCuts = [0];
+  const xBands = [];
+  const yBands = [];
 
   for (let c = 1; c < columns; c += 1) {
     const expected = width * c / columns;
-    xCuts.push(trim ? findDivider(imageData, expected, "x", tolerance, searchX) : Math.round(expected));
+    const band = trim
+      ? findDividerBand(imageData, expected, "x", tolerance, searchX)
+      : { center: Math.round(expected), start: Math.round(expected), end: Math.round(expected) - 1, found: false };
+    xBands.push(band);
+    xCuts.push(band.center);
   }
   for (let r = 1; r < rows; r += 1) {
     const expected = height * r / rows;
-    yCuts.push(trim ? findDivider(imageData, expected, "y", tolerance, searchY) : Math.round(expected));
+    const band = trim
+      ? findDividerBand(imageData, expected, "y", tolerance, searchY)
+      : { center: Math.round(expected), start: Math.round(expected), end: Math.round(expected) - 1, found: false };
+    yBands.push(band);
+    yCuts.push(band.center);
   }
   xCuts.push(width);
   yCuts.push(height);
@@ -100,14 +113,18 @@ export function calculateGrid(imageData, rows = 2, columns = 2, options = {}) {
   const tiles = [];
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < columns; c += 1) {
+      const left = c === 0 ? 0 : xBands[c - 1].end + 1;
+      const right = c === columns - 1 ? width : xBands[c].start;
+      const top = r === 0 ? 0 : yBands[r - 1].end + 1;
+      const bottom = r === rows - 1 ? height : yBands[r].start;
       const rect = {
-        x: xCuts[c],
-        y: yCuts[r],
-        width: xCuts[c + 1] - xCuts[c],
-        height: yCuts[r + 1] - yCuts[r]
+        x: left,
+        y: top,
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top)
       };
       tiles.push(trim ? trimWhiteEdges(imageData, rect, tolerance) : rect);
     }
   }
-  return { tiles, xCuts, yCuts };
+  return { tiles, xCuts, yCuts, xBands, yBands };
 }

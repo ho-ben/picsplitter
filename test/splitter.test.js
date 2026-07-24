@@ -35,9 +35,30 @@ test("finds off-center white dividers and trims each tile", () => {
   const result = calculateGrid(input, 2, 2, { trim: true, tolerance: 10 });
   assert.deepEqual(result.xCuts, [0, 9, 21]);
   assert.deepEqual(result.yCuts, [0, 10, 20]);
+  assert.deepEqual(result.xBands[0], { center: 9, start: 8, end: 9, found: true });
   assert.equal(result.tiles.length, 4);
   assert.deepEqual(result.tiles[0], { x: 0, y: 0, width: 8, height: 10 });
   assert.deepEqual(result.tiles[1], { x: 10, y: 0, width: 11, height: 10 });
+});
+
+test("removes inner wall separators when there is no white outer border", () => {
+  const input = imageData(24, 24, (x, y) => {
+    const innerWall = (x >= 10 && x <= 12) || (y >= 11 && y <= 13);
+    // Simulate a logo or blemish crossing a separator so it is not 100% white.
+    const dirtyWallPixel = innerWall && ((x === 11 && y < 4) || (y === 12 && x > 19));
+    if (innerWall && !dirtyWallPixel) return [246, 244, 241];
+    return x < 10 ? [40, 90, 130] : [170, 70, 45];
+  });
+  const result = calculateGrid(input, 2, 2, { trim: true, tolerance: 12 });
+
+  assert.deepEqual(result.xBands[0], { center: 11, start: 10, end: 12, found: true });
+  assert.deepEqual(result.yBands[0], { center: 12, start: 11, end: 13, found: true });
+  assert.deepEqual(result.tiles, [
+    { x: 0, y: 0, width: 10, height: 11 },
+    { x: 13, y: 0, width: 11, height: 11 },
+    { x: 0, y: 14, width: 10, height: 10 },
+    { x: 13, y: 14, width: 11, height: 10 }
+  ]);
 });
 
 test("keeps exact equal divisions when border trimming is off", () => {

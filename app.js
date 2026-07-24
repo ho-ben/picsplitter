@@ -5,7 +5,7 @@ const elements = {
   dropZone: $("#dropZone"), fileInput: $("#fileInput"), chooseButton: $("#chooseButton"),
   editor: $("#editor"), previewCanvas: $("#previewCanvas"), fileName: $("#fileName"),
   imageMeta: $("#imageMeta"), columnsValue: $("#columnsValue"), rowsValue: $("#rowsValue"),
-  tileCount: $("#tileCount"), splitCount: $("#splitCount"), trimBorders: $("#trimBorders"),
+  tileCount: $("#tileCount"), splitCount: $("#splitCount"), splitLabel: $("#splitLabel"), trimBorders: $("#trimBorders"),
   tolerance: $("#tolerance"), toleranceValue: $("#toleranceValue"), toleranceRow: $("#toleranceRow"),
   replaceButton: $("#replaceButton"), splitButton: $("#splitButton"), statusMessage: $("#statusMessage"),
   results: $("#results"), resultGrid: $("#resultGrid"), downloadAllButton: $("#downloadAllButton"),
@@ -13,38 +13,47 @@ const elements = {
 };
 
 const state = {
-  image: null, imageData: null, sourceCanvas: null, file: null,
+  items: [],
   rows: 2, columns: 2, outputs: []
 };
 
 function setCount() {
-  const count = state.rows * state.columns;
+  const perFile = state.rows * state.columns;
+  const fileCount = Math.max(1, state.items.length);
+  const count = perFile * fileCount;
   elements.rowsValue.value = state.rows;
   elements.columnsValue.value = state.columns;
-  elements.tileCount.textContent = `${count} photo${count === 1 ? "" : "s"}`;
-  elements.splitCount.textContent = count;
+  elements.tileCount.textContent = state.items.length > 1
+    ? `${perFile} each · ${count} total`
+    : `${count} photo${count === 1 ? "" : "s"}`;
+  elements.splitLabel.innerHTML = state.items.length > 1
+    ? `Split ${state.items.length} collages into <b id="splitCount">${count}</b> PNGs`
+    : `Split into <b id="splitCount">${count}</b> PNGs`;
+  elements.splitCount = $("#splitCount");
 }
 
-function getGrid() {
-  return calculateGrid(state.imageData, state.rows, state.columns, {
+function getGrid(item = state.items[0]) {
+  return calculateGrid(item.imageData, state.rows, state.columns, {
     trim: elements.trimBorders.checked,
-    tolerance: Number(elements.tolerance.value)
+    tolerance: Number(elements.tolerance.value),
+    separatorPadding: 2
   });
 }
 
 function drawPreview() {
-  if (!state.image) return;
+  const item = state.items[0];
+  if (!item) return;
   const maxDisplay = 1100;
-  const scale = Math.min(1, maxDisplay / Math.max(state.image.naturalWidth, state.image.naturalHeight));
+  const scale = Math.min(1, maxDisplay / Math.max(item.image.naturalWidth, item.image.naturalHeight));
   const canvas = elements.previewCanvas;
-  canvas.width = Math.round(state.image.naturalWidth * scale);
-  canvas.height = Math.round(state.image.naturalHeight * scale);
+  canvas.width = Math.round(item.image.naturalWidth * scale);
+  canvas.height = Math.round(item.image.naturalHeight * scale);
   const context = canvas.getContext("2d");
-  context.drawImage(state.image, 0, 0, canvas.width, canvas.height);
+  context.drawImage(item.image, 0, 0, canvas.width, canvas.height);
 
-  const { tiles } = getGrid();
+  const { tiles } = getGrid(item);
   context.save();
-  context.scale(canvas.width / state.image.naturalWidth, canvas.height / state.image.naturalHeight);
+  context.scale(canvas.width / item.image.naturalWidth, canvas.height / item.image.naturalHeight);
   context.lineWidth = Math.max(2, 3 / scale);
   context.strokeStyle = "#ef5a32";
   context.setLineDash([10 / scale, 7 / scale]);
@@ -57,11 +66,8 @@ function revokeOutputs() {
   state.outputs = [];
 }
 
-async function loadFile(file) {
-  if (!file?.type.startsWith("image/")) {
-    elements.statusMessage.innerHTML = "<span>!</span><p>Please choose an image file.</p>";
-    return;
-  }
+function decodeFile(file) {
+  return new Promise((resolve, reject) => {
   const url = URL.createObjectURL(file);
   const image = new Image();
   image.decoding = "async";
@@ -73,24 +79,55 @@ async function loadFile(file) {
     const context = sourceCanvas.getContext("2d", { willReadFrequently: true });
     context.drawImage(image, 0, 0);
 
-    state.image = image;
-    state.imageData = context.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    state.sourceCanvas = sourceCanvas;
-    state.file = file;
-    revokeOutputs();
-    elements.fileName.textContent = file.name;
-    elements.imageMeta.textContent = `${image.naturalWidth.toLocaleString()} × ${image.naturalHeight.toLocaleString()} px · ${(file.size / 1048576).toFixed(1)} MB`;
-    elements.dropZone.hidden = true;
-    elements.editor.hidden = false;
-    elements.results.hidden = true;
-    drawPreview();
-    elements.editor.scrollIntoView({ behavior: "smooth", block: "start" });
+    resolve({
+      file,
+      image,
+      imageData: context.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height),
+      sourceCanvas
+    });
   };
   image.onerror = () => {
     URL.revokeObjectURL(url);
-    elements.statusMessage.innerHTML = "<span>!</span><p>That image could not be read. Try a JPG, PNG, or WEBP file.</p>";
+    reject(new Error(`${file.name} could not be read`));
   };
   image.src = url;
+  });
+}
+
+async function loadFiles(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
+  if (!files.length) {
+    elements.statusMessage.innerHTML = "<span>!</span><p>Please choose one or more image files.</p>";
+    return;
+  }
+  elements.chooseButton.disabled = true;
+  elements.chooseButton.textContent = `Loading ${files.length} image${files.length === 1 ? "" : "s"}…`;
+  try {
+    const items = [];
+    // Decode sequentially to avoid a large memory spike on phones.
+    for (const file of files) items.push(await decodeFile(file));
+    state.items = items;
+    revokeOutputs();
+    const first = items[0];
+    elements.fileName.textContent = items.length === 1
+      ? first.file.name
+      : `${items.length} collages selected`;
+    const firstMeta = `${first.image.naturalWidth.toLocaleString()} × ${first.image.naturalHeight.toLocaleString()} px`;
+    elements.imageMeta.textContent = items.length === 1
+      ? `${firstMeta} · ${(first.file.size / 1048576).toFixed(1)} MB`
+      : `Previewing ${first.file.name} · ${firstMeta} · settings apply to all`;
+    elements.dropZone.hidden = true;
+    elements.editor.hidden = false;
+    elements.results.hidden = true;
+    setCount();
+    drawPreview();
+    elements.editor.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    elements.statusMessage.innerHTML = `<span>!</span><p>${error.message}. Try JPG, PNG, or WEBP files.</p>`;
+  } finally {
+    elements.chooseButton.disabled = false;
+    elements.chooseButton.textContent = "Choose images";
+  }
 }
 
 function blobFromCanvas(canvas) {
@@ -108,25 +145,28 @@ async function splitImage() {
   elements.splitButton.firstElementChild.textContent = "Preparing full-resolution PNGs…";
   revokeOutputs();
   try {
-    const { tiles } = getGrid();
-    for (let index = 0; index < tiles.length; index += 1) {
-      const tile = tiles[index];
-      const canvas = document.createElement("canvas");
-      canvas.width = tile.width;
-      canvas.height = tile.height;
-      canvas.getContext("2d").drawImage(
-        state.sourceCanvas,
-        tile.x, tile.y, tile.width, tile.height,
-        0, 0, tile.width, tile.height
-      );
-      const blob = await blobFromCanvas(canvas);
-      state.outputs.push({
-        blob,
-        url: URL.createObjectURL(blob),
-        width: tile.width,
-        height: tile.height,
-        name: `${safeBaseName(state.file.name)}-${String(index + 1).padStart(2, "0")}.png`
-      });
+    for (const item of state.items) {
+      const { tiles } = getGrid(item);
+      for (let index = 0; index < tiles.length; index += 1) {
+        const tile = tiles[index];
+        const canvas = document.createElement("canvas");
+        canvas.width = tile.width;
+        canvas.height = tile.height;
+        canvas.getContext("2d").drawImage(
+          item.sourceCanvas,
+          tile.x, tile.y, tile.width, tile.height,
+          0, 0, tile.width, tile.height
+        );
+        const blob = await blobFromCanvas(canvas);
+        state.outputs.push({
+          blob,
+          url: URL.createObjectURL(blob),
+          width: tile.width,
+          height: tile.height,
+          sourceName: item.file.name,
+          name: `${safeBaseName(item.file.name)}-${String(index + 1).padStart(2, "0")}.png`
+        });
+      }
     }
     renderResults();
     elements.results.hidden = false;
@@ -135,7 +175,10 @@ async function splitImage() {
     elements.statusMessage.innerHTML = `<span>!</span><p>${error.message}</p>`;
   } finally {
     elements.splitButton.disabled = false;
-    elements.splitButton.firstElementChild.innerHTML = `Split into <b id="splitCount">${state.rows * state.columns}</b> PNGs`;
+    const total = state.rows * state.columns * state.items.length;
+    elements.splitButton.firstElementChild.innerHTML = state.items.length > 1
+      ? `Split ${state.items.length} collages into <b id="splitCount">${total}</b> PNGs`
+      : `Split into <b id="splitCount">${total}</b> PNGs`;
     elements.splitCount = $("#splitCount");
   }
 }
@@ -161,7 +204,7 @@ function renderResults() {
     image.alt = `Split photo ${index + 1}`;
     imageWrap.append(image);
     const caption = document.createElement("figcaption");
-    caption.innerHTML = `<p>Photo ${index + 1}<small>${output.width.toLocaleString()} × ${output.height.toLocaleString()} px</small></p>`;
+    caption.innerHTML = `<p>${output.name}<small>${output.width.toLocaleString()} × ${output.height.toLocaleString()} px</small></p>`;
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = "Download";
@@ -177,7 +220,7 @@ elements.chooseButton.addEventListener("click", (event) => {
   elements.fileInput.click();
 });
 elements.dropZone.addEventListener("click", () => elements.fileInput.click());
-elements.fileInput.addEventListener("change", () => loadFile(elements.fileInput.files[0]));
+elements.fileInput.addEventListener("change", () => loadFiles(elements.fileInput.files));
 elements.replaceButton.addEventListener("click", () => elements.fileInput.click());
 elements.dropZone.addEventListener("dragover", (event) => {
   event.preventDefault();
@@ -187,7 +230,7 @@ elements.dropZone.addEventListener("dragleave", () => elements.dropZone.classLis
 elements.dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
   elements.dropZone.classList.remove("is-dragging");
-  loadFile(event.dataTransfer.files[0]);
+  loadFiles(event.dataTransfer.files);
 });
 
 document.querySelectorAll("[data-target]").forEach((button) => {
@@ -218,8 +261,7 @@ elements.downloadAllButton.addEventListener("click", async () => {
 });
 elements.startOverButton.addEventListener("click", () => {
   revokeOutputs();
-  state.image = null;
-  state.file = null;
+  state.items = [];
   elements.fileInput.value = "";
   elements.editor.hidden = true;
   elements.results.hidden = true;

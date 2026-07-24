@@ -32,7 +32,7 @@ test("finds off-center white dividers and trims each tile", () => {
     if (x === 8 || x === 9 || y === 10) return [255, 255, 255];
     return x < 8 ? [180, 20, 20] : [20, 50, 180];
   });
-  const result = calculateGrid(input, 2, 2, { trim: true, tolerance: 10 });
+  const result = calculateGrid(input, 2, 2, { trim: true, tolerance: 10, separatorPadding: 0 });
   assert.deepEqual(result.xCuts, [0, 9, 21]);
   assert.deepEqual(result.yCuts, [0, 10, 20]);
   assert.deepEqual(result.xBands[0], { center: 9, start: 8, end: 9, found: true });
@@ -49,7 +49,7 @@ test("removes inner wall separators when there is no white outer border", () => 
     if (innerWall && !dirtyWallPixel) return [246, 244, 241];
     return x < 10 ? [40, 90, 130] : [170, 70, 45];
   });
-  const result = calculateGrid(input, 2, 2, { trim: true, tolerance: 12 });
+  const result = calculateGrid(input, 2, 2, { trim: true, tolerance: 12, separatorPadding: 0 });
 
   assert.deepEqual(result.xBands[0], { center: 11, start: 10, end: 12, found: true });
   assert.deepEqual(result.yBands[0], { center: 12, start: 11, end: 13, found: true });
@@ -58,6 +58,15 @@ test("removes inner wall separators when there is no white outer border", () => 
     { x: 13, y: 0, width: 11, height: 11 },
     { x: 0, y: 14, width: 10, height: 10 },
     { x: 13, y: 14, width: 11, height: 10 }
+  ]);
+});
+
+test("adds a safety crop beside detected separators to remove white fringe", () => {
+  const input = imageData(22, 10, (x) => x >= 9 && x <= 11 ? [255, 255, 255] : [80, 100, 120]);
+  const result = calculateGrid(input, 1, 2, { trim: true, tolerance: 12, separatorPadding: 2 });
+  assert.deepEqual(result.tiles, [
+    { x: 0, y: 0, width: 7, height: 10 },
+    { x: 14, y: 0, width: 8, height: 10 }
   ]);
 });
 

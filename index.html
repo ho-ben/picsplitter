@@ -26,13 +26,13 @@
 
     <section class="workspace" aria-label="Photo splitter">
       <div id="dropZone" class="drop-zone">
-        <input id="fileInput" type="file" accept="image/*" hidden>
+        <input id="fileInput" type="file" accept="image/*" multiple hidden>
         <div class="upload-art" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
         </div>
-        <h2>Choose a collage</h2>
-        <p>Tap to browse, or drop an image here</p>
-        <button id="chooseButton" class="primary-button" type="button">Choose image</button>
+        <h2>Choose your collages</h2>
+        <p>Tap to browse, or drop one or more images here</p>
+        <button id="chooseButton" class="primary-button" type="button">Choose images</button>
         <small>JPG, PNG, WEBP · stays on your device</small>
       </div>
 
@@ -40,7 +40,7 @@
         <div class="preview-panel">
           <div class="preview-heading">
             <div>
-              <p class="step-label">Your collage</p>
+              <p class="step-label">Your selection</p>
               <h2 id="fileName">Ready to split</h2>
             </div>
             <button id="replaceButton" class="text-button" type="button">Replace</button>
@@ -103,7 +103,7 @@
           </div>
 
           <button id="splitButton" class="primary-button split-button" type="button">
-            <span>Split into <b id="splitCount">4</b> PNGs</span>
+            <span id="splitLabel">Split into <b id="splitCount">4</b> PNGs</span>
             <span aria-hidden="true">→</span>
           </button>
         </div>

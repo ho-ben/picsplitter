@@ -5,7 +5,9 @@ A private, mobile-first web app that turns a collage into separate, full-resolut
 ## Features
 
 - Defaults to a 2×2 collage and supports grids from 1×1 to 10×10
+- Accepts multiple collages at once and applies the selected grid to every file
 - Detects white and off-white outer borders and internal separators
+- Adds a two-pixel safety crop beside detected separators to remove anti-aliased fringe
 - Crops borders without resizing or recompressing the source pixels
 - Exports lossless PNG files at each tile's original pixel dimensions
 - Processes everything locally in the browser—no server, account, or tracking

@@ -81,7 +81,7 @@ function findDividerBand(imageData, expected, axis, tolerance, searchRadius) {
 }
 
 export function calculateGrid(imageData, rows = 2, columns = 2, options = {}) {
-  const { trim = true, tolerance = 12 } = options;
+  const { trim = true, tolerance = 12, separatorPadding = 2 } = options;
   const width = imageData.width;
   const height = imageData.height;
   const searchX = width / columns * 0.38;
@@ -117,11 +117,15 @@ export function calculateGrid(imageData, rows = 2, columns = 2, options = {}) {
       const right = c === columns - 1 ? width : xBands[c].start;
       const top = r === 0 ? 0 : yBands[r - 1].end + 1;
       const bottom = r === rows - 1 ? height : yBands[r].start;
+      const paddedLeft = left + (c > 0 && xBands[c - 1].found ? separatorPadding : 0);
+      const paddedRight = right - (c < columns - 1 && xBands[c].found ? separatorPadding : 0);
+      const paddedTop = top + (r > 0 && yBands[r - 1].found ? separatorPadding : 0);
+      const paddedBottom = bottom - (r < rows - 1 && yBands[r].found ? separatorPadding : 0);
       const rect = {
-        x: left,
-        y: top,
-        width: Math.max(1, right - left),
-        height: Math.max(1, bottom - top)
+        x: paddedLeft,
+        y: paddedTop,
+        width: Math.max(1, paddedRight - paddedLeft),
+        height: Math.max(1, paddedBottom - paddedTop)
       };
       tiles.push(trim ? trimWhiteEdges(imageData, rect, tolerance) : rect);
     }

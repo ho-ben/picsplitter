@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f2e9">
+  <meta name="description" content="Split photo collages into full-resolution PNG images, privately in your browser.">
+  <title>PicSplitter — Turn one collage into separate photos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="PicSplitter home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span>PicSplitter</span>
+    </a>
+    <span class="privacy-pill">Private · on-device</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Collage in. Photos out.</p>
+      <h1>Give every photo<br>its own frame.</h1>
+      <p class="intro">Upload a collage and download each picture as a crisp, border-free PNG. Nothing gets uploaded anywhere.</p>
+    </section>
+
+    <section class="workspace" aria-label="Photo splitter">
+      <div id="dropZone" class="drop-zone">
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <div class="upload-art" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <h2>Choose a collage</h2>
+        <p>Tap to browse, or drop an image here</p>
+        <button id="chooseButton" class="primary-button" type="button">Choose image</button>
+        <small>JPG, PNG, WEBP · stays on your device</small>
+      </div>
+
+      <div id="editor" class="editor" hidden>
+        <div class="preview-panel">
+          <div class="preview-heading">
+            <div>
+              <p class="step-label">Your collage</p>
+              <h2 id="fileName">Ready to split</h2>
+            </div>
+            <button id="replaceButton" class="text-button" type="button">Replace</button>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="previewCanvas" aria-label="Collage preview with split guides"></canvas>
+          </div>
+          <p id="imageMeta" class="image-meta"></p>
+        </div>
+
+        <div class="controls-panel">
+          <div class="control-heading">
+            <div>
+              <p class="step-label">Split settings</p>
+              <h2>Shape the grid</h2>
+            </div>
+            <span id="tileCount" class="count-badge">4 photos</span>
+          </div>
+
+          <div class="grid-controls">
+            <label>
+              <span>Columns</span>
+              <span class="number-control">
+                <button type="button" data-target="columns" data-delta="-1" aria-label="Decrease columns">−</button>
+                <output id="columnsValue">2</output>
+                <button type="button" data-target="columns" data-delta="1" aria-label="Increase columns">+</button>
+              </span>
+            </label>
+            <label>
+              <span>Rows</span>
+              <span class="number-control">
+                <button type="button" data-target="rows" data-delta="-1" aria-label="Decrease rows">−</button>
+                <output id="rowsValue">2</output>
+                <button type="button" data-target="rows" data-delta="1" aria-label="Increase rows">+</button>
+              </span>
+            </label>
+          </div>
+
+          <label class="toggle-row">
+            <span>
+              <strong>Remove white borders</strong>
+              <small>Detects outer edges and gaps between photos</small>
+            </span>
+            <input id="trimBorders" type="checkbox" checked>
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+
+          <label id="toleranceRow" class="range-row">
+            <span>
+              <strong>White sensitivity</strong>
+              <output id="toleranceValue">12%</output>
+            </span>
+            <input id="tolerance" type="range" min="2" max="35" value="12">
+            <small>Increase if off-white borders remain</small>
+          </label>
+
+          <div id="statusMessage" class="status-message" role="status">
+            <span aria-hidden="true">✓</span>
+            <p>Original pixels are preserved. Only detected borders are cropped.</p>
+          </div>
+
+          <button id="splitButton" class="primary-button split-button" type="button">
+            <span>Split into <b id="splitCount">4</b> PNGs</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="results" class="results" hidden>
+        <div class="results-heading">
+          <div>
+            <p class="step-label">All done</p>
+            <h2>Your photos are ready.</h2>
+          </div>
+          <button id="startOverButton" class="text-button" type="button">Start over</button>
+        </div>
+        <div id="resultGrid" class="result-grid"></div>
+        <button id="downloadAllButton" class="primary-button download-all" type="button">Download all PNGs</button>
+        <p class="download-note">On iPhone, multiple downloads may need your permission. You can always save each photo individually.</p>
+      </div>
+    </section>
+
+    <section class="how-it-works">
+      <p class="eyebrow">Simple by design</p>
+      <h2>Full quality. Zero fuss.</h2>
+      <div class="features">
+        <article><span>01</span><h3>Pick your collage</h3><p>Any common image format works.</p></article>
+        <article><span>02</span><h3>Set the grid</h3><p>2×2 by default, up to 10×10.</p></article>
+        <article><span>03</span><h3>Save every photo</h3><p>Lossless PNGs at source resolution.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>PicSplitter</span>
+    <p>No accounts. No uploads. No tracking.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

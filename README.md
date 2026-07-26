@@ -2,6 +2,8 @@
 
 A private, mobile-first web app that turns a collage into separate, full-resolution PNG images.
 
+For complete architecture, algorithm, testing, deployment, and Codex continuation details, see [docs/CODEX_HANDOFF.md](docs/CODEX_HANDOFF.md).
+
 ## Features
 
 - Defaults to a 2×2 collage and supports grids from 1×1 to 10×10

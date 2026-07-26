@@ -12,6 +12,7 @@ A private, mobile-first web app that turns a collage into separate, full-resolut
 - Exports lossless PNG files at each tile's original pixel dimensions
 - Processes everything locally in the browser—no server, account, or tracking
 - Works as a static site on GitHub Pages
+- Includes an Android-compatible web app manifest and maskable home-screen icon
 
 ## Run locally
 

@@ -85,14 +85,20 @@ button { color: inherit; }
   text-transform: uppercase;
 }
 
-h1 {
+.hero-title {
   max-width: 760px;
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(3.5rem, 10vw, 7rem);
-  font-weight: 500;
-  line-height: .86;
-  letter-spacing: -.065em;
+  display: flex;
+  gap: .12em;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: clamp(3.5rem, 9.5vw, 6.5rem);
+  font-weight: 850;
+  line-height: .9;
+  letter-spacing: -.075em;
+}
+
+.hero-title span:last-child {
+  color: var(--accent-dark);
 }
 
 .intro {
@@ -340,7 +346,10 @@ footer p { margin: 0; color: var(--muted); }
   .site-header, main, footer { width: min(100% - 22px, 1080px); }
   .site-header { min-height: 64px; }
   .hero { padding: 62px 7px 38px; }
-  h1 { font-size: clamp(3.55rem, 18vw, 5.3rem); }
+  .hero-title {
+    font-size: clamp(3rem, 14vw, 4.8rem);
+    letter-spacing: -.07em;
+  }
   .intro { margin-top: 24px; }
   .workspace { border-radius: 20px; }
   .drop-zone { min-height: 410px; margin: 10px; padding-inline: 18px; }
